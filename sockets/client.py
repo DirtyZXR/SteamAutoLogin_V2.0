@@ -5,6 +5,7 @@ from loguru import logger
 from notifiers.logging import NotificationHandler
 from loger_data import params
 import pickle
+import snoop
 
 logger.add("../file.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
 handler = NotificationHandler("telegram", defaults=params)
@@ -15,12 +16,12 @@ class ClientSocket:
         self.hostname = socket.gethostname()
         self.ip = self.__get_ip()
         self.port = 5000
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket = socket.socket()
 
         config = configparser.ConfigParser()
         logger.info("Reading config")
-        config.read("config.ini")
         try:
+            config.read("config.ini")
             self.server_ip = config.get("Settings",'server_ip')
             self.server_port = int(config.get("Settings",'port'))
             logger.info("Хост - {ip}", ip=self.server_ip)
@@ -29,12 +30,11 @@ class ClientSocket:
 
 
         self.can_connected = None
-        host_ping = self.host_ping()
+        self.host_ping()
 
 
 
-
-    def connection_usage(self):   #todo: Попробовать сделать поиск сервера по локальной сети
+    def connection_usage(self):   #todo: Попробовать сделать поиск сервера по локальной сети(функция не используется)
         str_ip = "192.168.88."
         ip = None
         name = socket.gethostname()
@@ -57,46 +57,54 @@ class ClientSocket:
         logger.info("Connected 8.8.8.8. My ip = {ip}", ip=ip)
         return ip
 
+
     def host_ping(self) -> bool:
         if self.can_connected is None:
             server_connection = self.socket.connect_ex((self.server_ip, self.server_port))
-            if server_connection == 10061:
-                logger.warning("Хост не доступен.")
-                return False
-            else:
-                logger.info("Подключился к хосту")
-                self.can_connected = True
-                return True
         else:
-            pass
+            self.socket.close()
+            self.socket = socket.socket()
+            server_connection = self.socket.connect_ex((self.server_ip, self.server_port))
+
+        if server_connection == 10061:
+            logger.warning("Хост не доступен.")
+            self.can_connected = None
+            return False
+        else:
+            logger.info("Подключился к хосту")
+            self.can_connected = True
+            return True
+
+
+    def ping_acc(self, username: str): #todo сделать отправку в БД самостоятельно
+        data = pickle.dumps(("ping", username))
+        try:
+            self.socket.sendall(data)
+        except:
+            logger.warning("Не смог отправить пинг хосту")
+
+
+
 
     def get_guard(self, username: str):
         data = pickle.dumps(("guard", username))
+        try:
+            self.socket.sendall(data)
+        except:
+            logger.warning("Не смог отправить запрос о гварде хосту")
+            return "ERROR"
 
+        try:
+            chunk = self.socket.recv(1024)
+        except:
+            logger.warning("Не смог получить ответ гварда от  хоста")
+            return "ERROR"
 
+        data = b''
+        data += chunk
+        guard = data.decode('utf-8')
 
-
-
-
-def client_program():
-    s = socket.gethostname()
-    port = 5000
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s = client_socket.connect_ex((s, port))
-    if s == 10061:
-        print('Connection failed. Host is shutdown')
-    else:
-        message = input(" -> ")
-
-        while message.lower().strip() != 'bye':
-            client_socket.send(message.encode())
-            data = client_socket.recv(1024).decode()
-
-            print('Received from server: ' + data)
-
-            message = input(" -> ")
-
-        client_socket.close()
+        return guard
 
 
 if __name__ == '__main__':
