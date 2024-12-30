@@ -38,8 +38,11 @@ class ServerSocket:
             data = b'' + chunk
             data = pickle.loads(data)
             if data[0] == 'guard':
-                f = self.sda.get_guard(data[1])
-                print(f)
+                guard = self.sda.get_guard(data[1])
+                try:
+                    conn.sendall(pickle.dumps(guard))
+                except:
+                    pass
             elif data[0] == 'ping':
                 pass
 
