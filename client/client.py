@@ -2,14 +2,12 @@ import socket
 from copyreg import pickle
 import configparser
 import pickle
-import snoop
+# import snoop
 from loguru import logger
 from notifiers.logging import NotificationHandler
 from loger_data import params
 
-logger.add("../file.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
-handler = NotificationHandler("telegram", defaults=params)
-logger.add(handler, level="ERROR")
+
 
 class ClientSocket:
     def __init__(self):
@@ -17,7 +15,7 @@ class ClientSocket:
         self.ip = self.__get_ip()
         self.port = 5000
         self.socket = socket.socket()
-
+        self.__get_loger_info()
         config = configparser.ConfigParser()
         logger.info("Reading config")
         try:
@@ -34,19 +32,23 @@ class ClientSocket:
 
 
 
-    def connection_usage(self):   #todo: Попробовать сделать поиск сервера по локальной сети(функция не используется)
-        str_ip = "192.168.88."
-        ip = None
-        name = socket.gethostname()
-        for i in range(255):
-            test_ip = str_ip + str(i + 1)
-            test_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            test_connection = test_socket.connect(test_ip, 5000)
-            if test_connection == 10061:
-                continue
-            else:
-                test_socket.send(name)
+    # def connection_usage(self):   #todo: Попробовать сделать поиск сервера по локальной сети(функция не используется)
+    #     str_ip = "192.168.88."
+    #     ip = None
+    #     name = socket.gethostname()
+    #     for i in range(255):
+    #         test_ip = str_ip + str(i + 1)
+    #         test_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #         test_connection = test_socket.connect(test_ip, 5000)
+    #         if test_connection == 10061:
+    #             continue
+    #         else:
+    #             test_socket.send(name)
 
+    def __get_loger_info(self):
+        logger.add("./file_client.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
+        handler = NotificationHandler("telegram", defaults=params)
+        logger.add(handler, level="ERROR")
 
     def __get_ip(self):
 
@@ -98,13 +100,9 @@ class ClientSocket:
             logger.warning("Не смог получить ответ гварда от  хоста")
             return "ERROR"
 
-        # data = b''
-        # data += chunk
-        # guard = data.decode('utf-8')
-        data = pickle.loads(chunk)
-        return data
+        guard = pickle.loads(chunk)
 
-        # return guard
+        return guard
 
 
 if __name__ == '__main__':
