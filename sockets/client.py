@@ -2,14 +2,14 @@ import socket
 from copyreg import pickle
 import configparser
 from loguru import logger
-from notifiers.logging import NotificationHandler
+# from notifiers.logging import NotificationHandler
 from loger_data import params
 import pickle
 import snoop
 
 logger.add("../file.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
-handler = NotificationHandler("telegram", defaults=params)
-logger.add(handler, level="ERROR")
+# handler = NotificationHandler("telegram", defaults=params)
+# logger.add(handler, level="ERROR")
 
 class ClientSocket:
     def __init__(self):
@@ -84,8 +84,6 @@ class ClientSocket:
             logger.warning("Не смог отправить пинг хосту")
 
 
-
-
     def get_guard(self, username: str):
         data = pickle.dumps(("guard", username))
         try:
@@ -100,11 +98,13 @@ class ClientSocket:
             logger.warning("Не смог получить ответ гварда от  хоста")
             return "ERROR"
 
-        data = b''
-        data += chunk
-        guard = data.decode('utf-8')
+        # data = b''
+        # data += chunk
+        # guard = data.decode('utf-8')
+        data = pickle.loads(chunk)
+        return data
 
-        return guard
+        # return guard
 
 
 if __name__ == '__main__':
