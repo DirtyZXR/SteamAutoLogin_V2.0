@@ -51,9 +51,11 @@ class ServerSocket:
     def distribution(self):
         while True:
             conn, address = self.wait_distribution.get()
-            chunk = conn.recv(1024)#todo try-except
-            data = b'' + chunk
-            data = pickle.loads(data)
+            try:
+                chunk = conn.recv(1024)#todo try-except
+                data = pickle.loads(chunk)
+            except:
+                data = '1'
             if data[0] == 'guard':
                 self.guard(data, conn)
             elif data[0] == 'ping':
