@@ -109,3 +109,5 @@ class ClientSocket:
 
 if __name__ == '__main__':
     client_soket = ClientSocket()
+    f = client_soket.get_guard("fabiooo12345")
+    print(f)

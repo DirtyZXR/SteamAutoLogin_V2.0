@@ -2,10 +2,15 @@ import socket
 import pickle
 from threading import Thread
 import queue
+
+from snoop import snoop
+
+from auth.SDA import SDA
 # import snoop
 
 
 class ServerSocket:
+
     def __init__(self):
         self.host = socket.gethostname()
         self.port = 5000
@@ -14,13 +19,15 @@ class ServerSocket:
         self.socket = socket.socket()
         self.socket.bind((self.host, self.port))
         self.socket.listen(25)
-        Thread(target=self.start_accept, daemon=True).start()#todo в клиенте исправить daemon = True
-        Thread(target=self.distribution, daemon=True).start()
-
+        self.sda = SDA()
+        Thread(target=self.start_accept, daemon=False).start()
+        Thread(target=self.distribution, daemon=False).start()
+        self.start_accept()
 
     def start_accept(self,):
         while True:
             conn, address = self.socket.accept()
+            print(address)
             self.wait_distribution.put((conn, address))
 
 
@@ -31,27 +38,13 @@ class ServerSocket:
             data = b'' + chunk
             data = pickle.loads(data)
             if data[0] == 'guard':
-                pass
+                f = self.sda.get_guard(data[1])
+                print(f)
             elif data[0] == 'ping':
                 pass
 
             # conn.send(b'1234')
             # conn.close()
-
-def chat(conn, address,):
-    # conn, address = server_socket.accept() # accept new connection
-    print("Connection from: " + str(address))
-    while True:
-        # receive data stream. it won't accept data packet greater than 1024 bytes
-        data = conn.recv(1024).decode()
-        if not data:
-            # if data is not received break
-            break
-        print("from connected user: " + str(data))
-        data = input(' -> ')
-        conn.send(data.encode()) # send data to the client
-    conn.close() # close the connection
-
 
 if __name__ == '__main__':
     ServerSocket()
