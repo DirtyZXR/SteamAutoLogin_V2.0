@@ -1,15 +1,15 @@
 import socket
 from copyreg import pickle
 import configparser
-from loguru import logger
-# from notifiers.logging import NotificationHandler
-from loger_data import params
 import pickle
 import snoop
+from loguru import logger
+from notifiers.logging import NotificationHandler
+from loger_data import params
 
 logger.add("../file.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
-# handler = NotificationHandler("telegram", defaults=params)
-# logger.add(handler, level="ERROR")
+handler = NotificationHandler("telegram", defaults=params)
+logger.add(handler, level="ERROR")
 
 class ClientSocket:
     def __init__(self):
@@ -77,7 +77,7 @@ class ClientSocket:
 
 
     def ping_acc(self, username: str): #todo сделать отправку в БД самостоятельно
-        data = pickle.dumps(("ping", username))
+        data = pickle.dumps(("ping", username, self.hostname,))
         try:
             self.socket.sendall(data)
         except:
@@ -85,7 +85,7 @@ class ClientSocket:
 
 
     def get_guard(self, username: str):
-        data = pickle.dumps(("guard", username))
+        data = pickle.dumps(("guard", username, self.hostname,))
         try:
             self.socket.sendall(data)
         except:
