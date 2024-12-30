@@ -4,7 +4,6 @@ import win32gui, win32process
 
 from loger_data import params
 from  interface_for_var_acc import get_num_acc
-import os
 import queue
 import mysql.connector
 from pywinauto import Application
@@ -17,10 +16,11 @@ import ctypes
 import pynput
 import winreg
 import psutil
-import snoop
 from client import ClientSocket
 from loguru import logger
 from notifiers.logging import NotificationHandler
+from My_Exeptions import *
+
 
 
 def get_window_pid():
@@ -53,7 +53,8 @@ def create_connection(host_name, user_name, user_password, db_name):
             database=db_name
         )
     except Exception as e:
-        logger.error("Не смог подключиться к БД.")#todo добавит имя хоста на error уровень
+        logger.error("Не смог инициадизировать подключение к БД | {host}", host=socket_code.hostname)
+        raise ConnectedError('Не смог инициализировать подключение к БД')
 
     return connection
 
@@ -93,8 +94,8 @@ def get_acc(appid):
     except Exception as e:
         cursor.close()
         connection.close()
-        logger.error("Ошибка подключения к БД")
-
+        logger.error("Ошибка подключения к БД | {host}", host=socket_code.hostname)
+        raise ConnectedError('Ошибка подключения к БД')
     return account
 
 
@@ -164,7 +165,6 @@ def auth_steam(id_, login_steam, password_steam, auth_mail, appid, need_wait):
     pid = get_window_pid()
 
     if pid != 'close':
-        print(login_steam)
         Thread(target=wait_close_steam, args=[login_steam], daemon=True).start()
         flag = False
         while not flag:
@@ -202,9 +202,7 @@ def auth_steam(id_, login_steam, password_steam, auth_mail, appid, need_wait):
             f = False
 
         if f:
-            mouse_listener = pynput.mouse.Listener(suppress=True)#todo сделать адекватно
             mouse_listener.start()
-            keyboard_listener = pynput.keyboard.Listener(suppress=True)
             keyboard_listener.start()
             sleep(1.5)
             text_wait = 'Создайте бесплатный аккаунт'
@@ -227,6 +225,8 @@ def auth_steam(id_, login_steam, password_steam, auth_mail, appid, need_wait):
                 keyboard_listener.stop()
                 logger.warning('Exception - {e}', e=e)
 
+
+
             if need_guard:
                 try:
                     place_for_symbol = [0, 0, 0, 0, 0]
@@ -238,7 +238,7 @@ def auth_steam(id_, login_steam, password_steam, auth_mail, appid, need_wait):
                             steam_code = socket_code.get_guard(login_steam)
                             if steam_code == 'ERROR':
                                 auth_mail = False
-                                logger.error('Не смог получить гвард от аккаунта - {login_steam}', login_steam=login_steam)
+                                logger.error('Не смог получить гвард от аккаунта - {login_steam} | {host}', login_steam=login_steam, host=socket_code.hostname)
 
                     except Exception as e:
                         mouse_listener.stop()
@@ -247,7 +247,8 @@ def auth_steam(id_, login_steam, password_steam, auth_mail, appid, need_wait):
                                                          "Steam Guard",1)
                         ctypes.windll.user32.MessageBoxW(0, f"Автоматически ввести Steam Guard не удалось. Попросите администратора",
                                                          "Steam Guard",1)
-                        logger.error("Не смог получить гвард. Ошибка - {e}", e=e)
+                        logger.error("Не смог получить гвард. Ошибка - {e} | {host}", e=e, host=socket_code.hostname)
+                        # raise SteamError('Не смог получить или ввести гвард')
 
                     try:
                         if auth_mail:
@@ -255,12 +256,12 @@ def auth_steam(id_, login_steam, password_steam, auth_mail, appid, need_wait):
                                 place_for_symbol[i].set_text(steam_code[i])
 
                     except Exception as e:
-                        logger.error("Не смог ввести гвард. Ошибка - {e}", e=e)
+                        logger.error("Не смог ввести гвард. Ошибка - {e} | {host}", e=e, host=socket_code.hostname)
                         mouse_listener.stop()
                         keyboard_listener.stop()
 
                 except Exception as e:
-                    logger.error("Необработанная ошибка. Ошибка - {e}", e=e)
+                    logger.error("Необработанная ошибка. Ошибка - {e} | {host}", e=e, host=socket_code.hostname)
                     event.set()
 
                 finally:
@@ -283,6 +284,9 @@ try:
     key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam")
     pid, regtype = winreg.QueryValueEx(key, "SteamPID")
     need_wait = False
+    mouse_listener = pynput.mouse.Listener(suppress=True)
+    keyboard_listener = pynput.keyboard.Listener(suppress=True)
+
 
     if not psutil.pid_exists(pid):
         pid = 0
@@ -297,9 +301,9 @@ try:
         appid = args.appid
         try:
 
-            # acc = get_acc(appid)
-            # id_, login_steam, pass_steam, auth_mail, ap = acc
-            id_, login_steam, pass_steam, auth_mail, ap = (0, "fabiooo12345", "qsxcgyujm1590.", 1, 730)
+            acc = get_acc(appid)
+            id_, login_steam, pass_steam, auth_mail, ap = acc
+            # id_, login_steam, pass_steam, auth_mail, ap = (0, "fabiooo12345", "qsxcgyujm1590.", 1, 730)
             suc = True
         except Exception as e:
             logger.warning(e)
