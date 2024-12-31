@@ -1,9 +1,10 @@
 from time import sleep
 import win32gui, win32process
 
-from client.auth_old import logging
-from client.loger_data import params
+
+from loger_data import params
 from  interface_for_var_acc import get_num_acc
+import os
 import queue
 import mysql.connector
 from pywinauto import Application
@@ -21,7 +22,7 @@ from client import ClientSocket
 from loguru import logger
 from notifiers.logging import NotificationHandler
 
-# @snoop
+
 def get_window_pid():
     key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam")
     pid, regtype = winreg.QueryValueEx(key, "SteamPID")
@@ -52,7 +53,7 @@ def create_connection(host_name, user_name, user_password, db_name):
             database=db_name
         )
     except Exception as e:
-        logger.error("Не смог подключиться к БД.")
+        logger.error("Не смог подключиться к БД.")#todo добавит имя хоста на error уровень
 
     return connection
 
@@ -60,7 +61,7 @@ def create_connection(host_name, user_name, user_password, db_name):
 def get_acc(appid):
     connection = create_connection(host_ip, login_db, pass_db, name_db)
     acc = """
-    SELECT id, login_steam, pass_steam, login_mail, password_mail, auth_mail, game
+    SELECT id, login_steam, pass_steam, auth_mail, game
     FROM users
     WHERE online = FALSE and active = TRUE
     """
@@ -76,19 +77,19 @@ def get_acc(appid):
             if len(accounts_appid) != 0:
                 num = get_num_acc(accounts_appid)
                 if num == -1:
-                    account = (0, 0, 0, 0, 0, 0, -1)
+                    account = (0, 0, 0, 0, -1)
                 else:
                     account = accounts_appid[num]
                     query = f"UPDATE users SET online = 1 WHERE id = {account[0]}"
                     cursor.execute(query)
                     connection.commit()
             else:
-                account = (0, 0, 0, 0, 0, 0, 0)
+                account = (0, 0, 0, 0, 0)
 
             cursor.close()
 
         connection.close()
-        logger.info(f"Получил данные аккаунта.{account[1]}")
+        logger.info(f"Получил данные аккаунта. {account[1]}")
     except Exception as e:
         cursor.close()
         connection.close()
@@ -154,7 +155,7 @@ def add_acc_login(window, username, password):
 
 
 # @snoop
-def auth_steam(id_, login_steam, password_steam, mail_login, mail_pass, auth_mail, appid, need_wait):
+def auth_steam(id_, login_steam, password_steam, auth_mail, appid, need_wait):
     # Запуск Steam
 
     webbrowser.open(f'steam://rungameid/{appid}')
@@ -163,7 +164,8 @@ def auth_steam(id_, login_steam, password_steam, mail_login, mail_pass, auth_mai
     pid = get_window_pid()
 
     if pid != 'close':
-        Thread(target=wait_close_steam, args=[pid, id_], daemon=False).start()
+        print(login_steam)
+        Thread(target=wait_close_steam, args=[login_steam], daemon=True).start()
         flag = False
         while not flag:
             try:
@@ -200,7 +202,7 @@ def auth_steam(id_, login_steam, password_steam, mail_login, mail_pass, auth_mai
             f = False
 
         if f:
-            mouse_listener = pynput.mouse.Listener(suppress=True)
+            mouse_listener = pynput.mouse.Listener(suppress=True)#todo сделать адекватно
             mouse_listener.start()
             keyboard_listener = pynput.keyboard.Listener(suppress=True)
             keyboard_listener.start()
@@ -210,7 +212,7 @@ def auth_steam(id_, login_steam, password_steam, mail_login, mail_pass, auth_mai
                 while 'Создайте бесплатный аккаунт' in text_wait or len(text_wait) == 13:
                     text_wait = window.child_window(control_type="Document", found_index=0).wait(wait_for='active', timeout=10)
                     text_wait = text_wait.window_text()
-                    Thread(target=wait_close_steam, args=login_steam, daemon=True).start()
+
 
                 if 'Введите код' in text_wait:
                     need_guard = True
@@ -234,8 +236,9 @@ def auth_steam(id_, login_steam, password_steam, mail_login, mail_pass, auth_mai
                         if auth_mail:
                             logger.info('Потребовался Гвард на аккаунт - {login_steam}', login_steam=login_steam)
                             steam_code = socket_code.get_guard(login_steam)
-                            if steam_code == 'error':
+                            if steam_code == 'ERROR':
                                 auth_mail = False
+                                logger.error('Не смог получить гвард от аккаунта - {login_steam}', login_steam=login_steam)
 
                     except Exception as e:
                         mouse_listener.stop()
@@ -272,7 +275,7 @@ def auth_steam(id_, login_steam, password_steam, mail_login, mail_pass, auth_mai
         event.set()
 
 
-logger.add("./file_client.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message} | {extra{host}}", level="INFO", rotation="100MB")
+logger.add("./file_client.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
 handler = NotificationHandler("telegram", defaults=params)
 logger.add(handler, level="ERROR")
 
@@ -294,12 +297,12 @@ try:
         appid = args.appid
         try:
 
-            acc = get_acc(appid)
-
-            id_, login_steam, pass_steam, login_mail, password_mail, auth_mail, ap = acc
+            # acc = get_acc(appid)
+            # id_, login_steam, pass_steam, auth_mail, ap = acc
+            id_, login_steam, pass_steam, auth_mail, ap = (0, "fabiooo12345", "qsxcgyujm1590.", 1, 730)
             suc = True
         except Exception as e:
-            logging(e)
+            logger.warning(e)
             ap = 0
             suc = False
 
@@ -313,12 +316,11 @@ try:
                                                      1)
             else:
                 socket_code = ClientSocket()
-                logger.bind(host=socket_code.hostname)
                 auth_steam(id_, login_steam, pass_steam, auth_mail, ap, need_wait)
 
     else:
         ctypes.windll.user32.MessageBoxW(0, "Стим запущен. Сначала закройте стим.", "Ошибка", 1)
 except Exception as e:
-    logging(e)
+    logger.warning(e)
     ctypes.windll.user32.MessageBoxW(0, "Возникла неизвестная ошибка. Обратитесь к администратору",
                                      "Ошибка", 1)

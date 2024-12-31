@@ -82,6 +82,7 @@ class ClientSocket:
         data = pickle.dumps(("ping", username, self.hostname,))
         try:
             self.socket.sendall(data)
+            logger.info(f'Пинганул о аккаунте  {username}')
         except:
             logger.warning("Не смог отправить пинг хосту")
 
@@ -103,9 +104,3 @@ class ClientSocket:
         guard = pickle.loads(chunk)
 
         return guard
-
-
-if __name__ == '__main__':
-    client_soket = ClientSocket()
-    f = client_soket.get_guard("fabiooo12345")
-    print(f)
