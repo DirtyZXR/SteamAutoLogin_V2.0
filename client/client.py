@@ -15,7 +15,6 @@ class ClientSocket:
         self.ip = self.__get_ip()
         self.port = 5000
         self.socket = socket.socket()
-        self.__get_loger_info()
         config = configparser.ConfigParser()
         logger.info("Reading config")
         try:
@@ -44,11 +43,6 @@ class ClientSocket:
     #             continue
     #         else:
     #             test_socket.send(name)
-
-    def __get_loger_info(self):
-        logger.add("./file_client.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
-        handler = NotificationHandler("telegram", defaults=params)
-        logger.add(handler, level="ERROR")
 
     def __get_ip(self):
 

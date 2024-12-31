@@ -14,9 +14,7 @@ from os import path
 from time import sleep
 from SDA import SDA
 
-logger.add("./file_server.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
-handler = NotificationHandler("telegram", defaults=params)
-logger.add(handler, level="ERROR")
+
 
 class ServerSocket:
 
@@ -154,4 +152,7 @@ class ServerSocket:
             return False
 
 if __name__ == '__main__':
+    logger.add("./file_server.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
+    handler = NotificationHandler("telegram", defaults=params)
+    logger.add(handler, level="ERROR")
     ServerSocket()

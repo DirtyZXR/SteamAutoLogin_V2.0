@@ -1,6 +1,6 @@
 from time import sleep
 import win32gui, win32process
-
+from snoop import snoop
 
 from loger_data import params
 from  interface_for_var_acc import get_num_acc
@@ -98,7 +98,7 @@ def get_acc(appid):
     return account
 
 
-# @snoop
+@snoop
 def check_add_account(window, pid, q):
     f = pid_exists(pid)
     while f and not event_succes.is_set():
@@ -111,7 +111,7 @@ def check_add_account(window, pid, q):
             q.put_nowait('yes add')
 
 
-# @snoop
+@snoop
 def check_login(window, pid, q):
     f = pid_exists(pid)
     while f and not event_succes.is_set():
@@ -126,7 +126,7 @@ def check_login(window, pid, q):
         q.put_nowait('close steam')
 
 
-# @snoop
+@snoop
 def login(window, username, password):
     username_pane = window.child_window(control_type="Edit", found_index=0)
     password_pane = window.child_window(control_type="Edit", found_index=1)
@@ -143,7 +143,7 @@ def wait_close_steam(username):
         sleep(10)
         socket_code.ping_acc(username)
 
-# @snoop
+@snoop
 def add_acc_login(window, username, password):
     add_account = window.child_window(title='Добавить аккаунт', control_type='Group')
     im = add_account.child_window(control_type='Image')
@@ -154,7 +154,7 @@ def add_acc_login(window, username, password):
     login(window, username, password)
 
 
-# @snoop
+@snoop
 def auth_steam(id_, login_steam, password_steam, auth_mail, appid, need_wait):
     # Запуск Steam
 
@@ -294,16 +294,22 @@ try:
     if pid == 0:
         event = Event()
         event_succes = Event()
-        parser = argparse.ArgumentParser(description='Run Steam')
-        parser.add_argument('appid', type=str, help='Id game in steam')
-        args = parser.parse_args()
-        appid = args.appid
+        try:
+            parser = argparse.ArgumentParser(description='Run Steam')
+            parser.add_argument('appid', type=str, help='Id game in steam')
+            args = parser.parse_args()
+            appid = args.appid
+        except:
+            logger.warning('Не удалось получить аргументы')
+            raise Exception('Не удалось получить аргументы')
+
         try:
 
             acc = get_acc(appid)
             id_, login_steam, pass_steam, auth_mail, ap = acc
             # id_, login_steam, pass_steam, auth_mail, ap = (0, "fabiooo12345", "qsxcgyujm1590.", 1, 730)
             suc = True
+
         except Exception as e:
             logger.warning(e)
             ap = 0
