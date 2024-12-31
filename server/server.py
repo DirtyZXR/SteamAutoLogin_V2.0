@@ -1,16 +1,18 @@
+import ctypes
 import socket
 import pickle
-from threading import Thread
 import queue
+import json
+import mysql.connector
+
+from threading import Thread
 from loguru import logger
 from notifiers.logging import NotificationHandler
+from data_all import host_ip, login_db, pass_db, name_db
 from loger_data import params
-import json
 from os import path
 from time import sleep
-
 from SDA import SDA
-import snoop
 
 logger.add("./file_server.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
 handler = NotificationHandler("telegram", defaults=params)
@@ -40,7 +42,8 @@ class ServerSocket:
             Thread(target=self.__update_acc, daemon=False).start()
             self.start_accept()
         else:
-            pass#todo вывести уведомление о sda
+            ctypes.windll.user32.MessageBoxW(0, f"Проблема при открытии SDA. Проверьте путь до SDA в конфиг-файле",
+                                             "SDA",1)
 
     def start_accept(self,):
         while True:
@@ -52,10 +55,11 @@ class ServerSocket:
         while True:
             conn, address = self.wait_distribution.get()
             try:
-                chunk = conn.recv(1024)#todo try-except
+                chunk = conn.recv(1024)
                 data = pickle.loads(chunk)
             except:
                 data = '1'
+
             if data[0] == 'guard':
                 self.guard(data, conn)
             elif data[0] == 'ping':
@@ -80,7 +84,7 @@ class ServerSocket:
             for username in list(self.backup):
                 if self.backup[username] == 0:
                     self.backup.pop(username)
-                    #todo отправка в бд аккаунта в офлайн
+                    self.set_acc_ofline(username)
                 else:
                     self.backup[username] = 0
             with open('backup.json', 'w') as file:
@@ -103,44 +107,51 @@ class ServerSocket:
 
         try:
             conn.sendall(pickle.dumps(guard))
+        except Exception as e:
+            ctypes.windll.user32.MessageBoxW(0, f"Не смог отправить guard на {hostname}",
+                                             "Steam Guard",1)
+            logger.warning(f'Не смог отправить гвард на {hostname}. Ошибка {e}')
+
+
+    def create_connection(self, host_name, user_name, user_password, db_name):
+        connection = None
+        try:
+
+            connection = mysql.connector.connect(
+                host=host_name,
+                user=user_name,
+                passwd=user_password,
+                database=db_name
+            )
+            return connection
+        except Exception as e:
+            logger.error("Error connecting to BD")
+            return False
+
+
+    def set_acc_ofline(self, username):
+        query = f"UPDATE users SET online = FALSE WHERE login_steam = {username}"
+        try:
+
+            connection = mysql.connector.connect(
+                host=host_ip,
+                user=login_db,
+                passwd=pass_db,
+                database=name_db
+            )
+        except Exception as e:
+            logger.error('Сервер не смог подключиться к БД')
+            return False
+
+        try:
+            cursor = connection.cursor()
+            cursor.execute(query)
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return True
         except:
-            pass#todo логер и ошибку
-
-
-def create_connection(host_name, user_name, user_password, db_name):
-    connection = None
-    try:
-
-        connection = mysql.connector.connect(
-            host=host_name,
-            user=user_name,
-            passwd=user_password,
-            database=db_name
-        )
-    except Exception as e:
-        logging(e)
-
-    return connection
-
-def set_acc_ofline(id_):
-    query = f"UPDATE users SET online = FALSE WHERE id = {id_}"
-    try:
-
-        connection = mysql.connector.connect(
-            host=host_ip,
-            user=login_db,
-            passwd=pass_db,
-            database=name_db
-        )
-    except Exception as e:
-        logging(e)
-
-    cursor = connection.cursor()
-    cursor.execute(query)
-    connection.commit()
-    cursor.close()
-    connection.close()
-
+            return False
 
 if __name__ == '__main__':
     ServerSocket()

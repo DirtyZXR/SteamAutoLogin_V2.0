@@ -1,11 +1,9 @@
 from time import sleep
 import win32gui, win32process
-from Demos.win32cred_demo import username
 
 from client.auth_old import logging
 from client.loger_data import params
 from  interface_for_var_acc import get_num_acc
-import os
 import queue
 import mysql.connector
 from pywinauto import Application
@@ -22,14 +20,6 @@ import snoop
 from client import ClientSocket
 from loguru import logger
 from notifiers.logging import NotificationHandler
-
-# snoop.install(out= 'logger.txt', columns="time thread")
-
-
-# def logging(e):
-#     e = str(e)
-#     with open('logger.txt', 'a+') as file:
-#         file.write(e+'\n')
 
 # @snoop
 def get_window_pid():
