@@ -2,10 +2,7 @@ from pywinauto import Application, clipboard
 import psutil
 from loguru import logger
 from notifiers.logging import NotificationHandler
-from snoop import snoop
-
 from client.loger_data import params
-from os import path
 import configparser
 
 
