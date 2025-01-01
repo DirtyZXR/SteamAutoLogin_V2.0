@@ -81,7 +81,7 @@ class ClientSocket:
             logger.warning("Не смог отправить пинг хосту")
 
 
-    def get_guard(self, username: str):
+    def get_guard(self, username: str) -> str:
         data = pickle.dumps(("guard", username, self.hostname,))
         try:
             self.socket.sendall(data)

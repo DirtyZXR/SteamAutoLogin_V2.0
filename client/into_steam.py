@@ -1,25 +1,14 @@
-import subprocess
-from asyncio import timeout
-from time import sleep
-import win32gui, win32process
-from  interface_for_var_acc import get_num_acc
-import os
-import queue
-import mysql.connector
+from venv import logger
+
 from pywinauto import Application
-from threading import Thread, Event
-from psutil import pid_exists
-from data_all import host_ip, login_db, pass_db, name_db
-import webbrowser
-import argparse
-import ctypes
 import pynput
 import winreg
-import psutil
-import snoop
+
 
 class Steam:
     def __init__(self, login:str, password:str, id_game:int):
+        self.mouse_listener = pynput.mouse.Listener(suppress=True)
+        self.keyboard_listener = pynput.keyboard.Listener(suppress=True)
         self.app = self.run_steam(login, password, id_game)
         self.guard = self.login(login, password)
 
@@ -40,8 +29,7 @@ class Steam:
 
         return app
 
-    @snoop
-    def login(self, login, password):
+    def login(self, login, password) -> bool:
         window = self.app.top_window()
         f = False
         while True:
@@ -56,34 +44,39 @@ class Steam:
                     else:
                         f = True
 
+        self.keyboard_listener.start()
+        self.mouse_listener.start()
 
-        window.child_window(control_type="Edit", found_index=0).set_text(login)
-        window.child_window(control_type="Edit", found_index=1).set_text(password)
-        window.child_window(title="Войти").click()
-
-        text_wait = 'Создайте бесплатный аккаунт'
         try:
-            while 'Создайте бесплатный аккаунт' in text_wait or len(text_wait) == 13:
-                text_wait = window.child_window(control_type="Document", found_index=0).wait(wait_for='active', timeout=10)
-                text_wait = text_wait.window_text()
-        except:
-            pass
 
-        print(text_wait)#todo Ошибка При входе в аккаунт произошла ошибка. Повторите попытку позже. Повторить Код ошибки: e87
-        if 'Введите код' in text_wait:
-            return True
-        else:
-            return False
+            window.child_window(control_type="Edit", found_index=0).set_text(login)
+            window.child_window(control_type="Edit", found_index=1).set_text(password)
+            window.child_window(title="Войти").click()
+
+            text_wait = 'Создайте бесплатный аккаунт'
+            try:
+                while 'Создайте бесплатный аккаунт' in text_wait or len(text_wait) == 13:
+                    text_wait = window.child_window(control_type="Document", found_index=0).wait(wait_for='active', timeout=10)
+                    text_wait = text_wait.window_text()
+            except:
+                pass
+
+            # print(text_wait)#Ошибка При входе в аккаунт произошла ошибка. Повторите попытку позже. Повторить Код ошибки: e87
+            if 'Введите код' in text_wait:
+                return True
+            elif 'Ошибка' in text_wait:
+                window.child_window(title='Повторить').click()
+                return self.login(login, password)
+            else:
+                return False
+        except Exception as e:
+            raise Exception(f"Ошибка при входе в аккаунт - {e}")
+
+        finally:
+            self.mouse_listener.stop()
+            self.keyboard_listener.stop()
 
     def guard_input(self, guard_code:str):
         window = self.app.top_window()
         for i in range(5):
            window.child_window(control_type="Edit", found_index=i).set_text(guard_code[i])
-
-
-
-
-steam = Steam("fabiooo12345", "qsxcgyujm1590.", 730)
-if steam.guard:
-    a = input()
-    steam.guard_input(a)
