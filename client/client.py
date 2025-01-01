@@ -1,10 +1,13 @@
 import socket
+import time
 from copyreg import pickle
 import configparser
 import pickle
 # import snoop
 from loguru import logger
 from notifiers.logging import NotificationHandler
+from snoop import snoop
+
 from loger_data import params
 
 
@@ -71,12 +74,12 @@ class ClientSocket:
             self.can_connected = True
             return True
 
-
+    # @snoop
     def ping_acc(self, username: str): #todo сделать отправку в БД самостоятельно
         data = pickle.dumps(("ping", username, self.hostname,))
         try:
             self.socket.sendall(data)
-            logger.info(f'Пинганул о аккаунте  {username}')
+            # logger.info(f'Пинганул о аккаунте  {username}')
         except:
             logger.warning("Не смог отправить пинг хосту")
 
@@ -85,12 +88,14 @@ class ClientSocket:
         data = pickle.dumps(("guard", username, self.hostname,))
         try:
             self.socket.sendall(data)
+            logger.info('Отправил запрос о гварде хосту')
         except:
             logger.warning("Не смог отправить запрос о гварде хосту")
             return "ERROR"
 
         try:
             chunk = self.socket.recv(1024)
+            logger.info('Получил гвард от хоста')
         except:
             logger.warning("Не смог получить ответ гварда от  хоста")
             return "ERROR"
@@ -98,3 +103,4 @@ class ClientSocket:
         guard = pickle.loads(chunk)
 
         return guard
+

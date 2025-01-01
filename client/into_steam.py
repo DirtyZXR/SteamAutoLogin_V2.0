@@ -1,3 +1,4 @@
+import time
 from venv import logger
 
 from pywinauto import Application
@@ -7,8 +8,6 @@ import winreg
 
 class Steam:
     def __init__(self, login:str, password:str, id_game:int):
-        self.mouse_listener = pynput.mouse.Listener(suppress=True)
-        self.keyboard_listener = pynput.keyboard.Listener(suppress=True)
         self.app = self.run_steam(login, password, id_game)
         self.guard = self.login(login, password)
 
@@ -29,23 +28,24 @@ class Steam:
 
         return app
 
-    def login(self, login, password) -> bool:
+    def login(self, login, password, try_number = 0) -> bool:
         window = self.app.top_window()
-        f = False
+        f = 0
         while True:
             try:
                 window.child_window(control_type="Edit", found_index=0).wait(wait_for="active", timeout=5)
                 break
             except:
-                enter = window.child_window(title="Вход...").window_text()
-                if enter != "Вход...":
-                    if f:
-                        raise Exception("Не удалось найти поле ввода логина")
-                    else:
-                        f = True
-
-        self.keyboard_listener.start()
-        self.mouse_listener.start()
+                f += 1
+                try:
+                    enter = window.child_window(title="Вход...").window_text()
+                    if enter != "Вход...":
+                        if f > 5:
+                            raise Exception("Не удалось найти поле ввода логина")
+                        else:
+                            f = True
+                except:
+                    pass
 
         try:
 
@@ -61,22 +61,32 @@ class Steam:
             except:
                 pass
 
+
             # print(text_wait)#Ошибка При входе в аккаунт произошла ошибка. Повторите попытку позже. Повторить Код ошибки: e87
             if 'Введите код' in text_wait:
                 return True
             elif 'Ошибка' in text_wait:
                 window.child_window(title='Повторить').click()
-                return self.login(login, password)
+                try_number += 1
+                if try_number >= 3:
+                    raise Exception('У стима ошибка')#todo вывести на экран
+                else:
+                    return self.login(login, password, try_number)
             else:
                 return False
         except Exception as e:
             raise Exception(f"Ошибка при входе в аккаунт - {e}")
 
-        finally:
-            self.mouse_listener.stop()
-            self.keyboard_listener.stop()
+
 
     def guard_input(self, guard_code:str):
+        try_number = 0
         window = self.app.top_window()
-        for i in range(5):
-           window.child_window(control_type="Edit", found_index=i).set_text(guard_code[i])
+        while try_number < 5:
+            try:
+                for i in range(5):
+                   window.child_window(control_type="Edit", found_index=i).set_text(guard_code[i])
+                break
+            except:
+                try_number += 1
+                time.sleep(3)
