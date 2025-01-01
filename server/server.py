@@ -5,27 +5,28 @@ import queue
 import json
 import mysql.connector
 
-from threading import Thread
+from threading import Thread, Lock
 from loguru import logger
 from notifiers.logging import NotificationHandler
+from snoop import snoop
+
 from data_all import host_ip, login_db, pass_db, name_db
 from loger_data import params
 from os import path
 from time import sleep
 from SDA import SDA
 
-logger.add("./file_server.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
-handler = NotificationHandler("telegram", defaults=params)
-logger.add(handler, level="ERROR")
+
 
 class ServerSocket:
 
     def __init__(self):
         self.host = socket.gethostname()
         self.port = 5000
-        self.wait_distribution = queue.Queue()
         self.wait_guard = queue.Queue()
         self.wait_ping = queue.Queue()
+        self.wait_distribution = queue.Queue()
+        self.lock = Lock()
         self.backup = {}
         self.socket = socket.socket()
         self.socket.bind((self.host, self.port))
@@ -38,8 +39,8 @@ class ServerSocket:
 
         if self.sda is not None:
             Thread(target=self.start_accept, daemon=False).start()
-            Thread(target=self.distribution, daemon=False).start()
             Thread(target=self.__update_acc, daemon=False).start()
+            Thread(target=self.guard, daemon=False).start()
             self.start_accept()
         else:
             ctypes.windll.user32.MessageBoxW(0, f"Проблема при открытии SDA. Проверьте путь до SDA в конфиг-файле",
@@ -48,20 +49,19 @@ class ServerSocket:
     def start_accept(self,):
         while True:
             conn, address = self.socket.accept()
-            self.wait_distribution.put((conn, address))
+            Thread(target=self.distribution, args=[conn, address], daemon=False).start()
 
-
-    def distribution(self):
+    # @snoop
+    def distribution(self, conn, address):
         while True:
-            conn, address = self.wait_distribution.get()
             try:
                 chunk = conn.recv(1024)
                 data = pickle.loads(chunk)
             except:
-                data = '1'
+                break
 
             if data[0] == 'guard':
-                self.guard(data, conn)
+                self.wait_guard.put((data, conn))
             elif data[0] == 'ping':
                 self.wait_ping.put(data[1])
 
@@ -83,7 +83,8 @@ class ServerSocket:
             sleep(30)
             for username in list(self.backup):
                 if self.backup[username] == 0:
-                    self.backup.pop(username)
+                    with self.lock:
+                        self.backup.pop(username)
                     self.set_acc_ofline(username)
                 else:
                     self.backup[username] = 0
@@ -94,23 +95,28 @@ class ServerSocket:
     def __get_ping_acc(self):
         while True:
             username = self.wait_ping.get()
-            self.backup[username] = 1
+            with self.lock:
+                self.backup[username] = 1
             print(self.backup)
 
     # @snoop
-    def guard(self, data, conn):
-        username = data[1]
-        hostname = data[2]
-        guard = self.sda.get_guard(username)
+    def guard(self,):
+        while True:
+            data, conn = self.wait_guard.get()
 
-        self.wait_ping.put(username)
+            username = data[1]
+            hostname = data[2]
 
-        try:
-            conn.sendall(pickle.dumps(guard))
-        except Exception as e:
-            ctypes.windll.user32.MessageBoxW(0, f"Не смог отправить guard на {hostname}",
-                                             "Steam Guard",1)
-            logger.warning(f'Не смог отправить гвард на {hostname}. Ошибка {e}')
+            guard = self.sda.get_guard(username)
+
+            self.wait_ping.put(username)
+
+            try:
+                conn.sendall(pickle.dumps(guard))
+            except Exception as e:
+                ctypes.windll.user32.MessageBoxW(0, f"Не смог отправить guard на {hostname}",
+                                                 "Steam Guard",1)
+                logger.warning(f'Не смог отправить гвард на {hostname}. Ошибка {e}')
 
 
     def create_connection(self, host_name, user_name, user_password, db_name):
@@ -151,7 +157,11 @@ class ServerSocket:
             connection.close()
             return True
         except:
+            logger.error("Не смог обновить данные аккаунта")
             return False
 
 if __name__ == '__main__':
+    logger.add("./file_server.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
+    handler = NotificationHandler("telegram", defaults=params)
+    logger.add(handler, level="ERROR")
     ServerSocket()

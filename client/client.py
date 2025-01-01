@@ -1,10 +1,13 @@
 import socket
+import time
 from copyreg import pickle
 import configparser
 import pickle
 # import snoop
 from loguru import logger
 from notifiers.logging import NotificationHandler
+from snoop import snoop
+
 from loger_data import params
 
 
@@ -15,7 +18,6 @@ class ClientSocket:
         self.ip = self.__get_ip()
         self.port = 5000
         self.socket = socket.socket()
-        self.__get_loger_info()
         config = configparser.ConfigParser()
         logger.info("Reading config")
         try:
@@ -45,11 +47,6 @@ class ClientSocket:
     #         else:
     #             test_socket.send(name)
 
-    def __get_loger_info(self):
-        logger.add("./file_client.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
-        handler = NotificationHandler("telegram", defaults=params)
-        logger.add(handler, level="ERROR")
-
     def __get_ip(self):
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -77,26 +74,28 @@ class ClientSocket:
             self.can_connected = True
             return True
 
-
+    # @snoop
     def ping_acc(self, username: str): #todo сделать отправку в БД самостоятельно
         data = pickle.dumps(("ping", username, self.hostname,))
         try:
             self.socket.sendall(data)
-            logger.info(f'Пинганул о аккаунте  {username}')
+            # logger.info(f'Пинганул о аккаунте  {username}')
         except:
             logger.warning("Не смог отправить пинг хосту")
 
 
-    def get_guard(self, username: str):
+    def get_guard(self, username: str) -> str:
         data = pickle.dumps(("guard", username, self.hostname,))
         try:
             self.socket.sendall(data)
+            logger.info('Отправил запрос о гварде хосту')
         except:
             logger.warning("Не смог отправить запрос о гварде хосту")
             return "ERROR"
 
         try:
             chunk = self.socket.recv(1024)
+            logger.info('Получил гвард от хоста')
         except:
             logger.warning("Не смог получить ответ гварда от  хоста")
             return "ERROR"
@@ -104,3 +103,4 @@ class ClientSocket:
         guard = pickle.loads(chunk)
 
         return guard
+

@@ -39,9 +39,6 @@ class SDA:
 
 
     def __get_logger_info(self):
-        logger.add("./file_sda.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
-        handler = NotificationHandler("telegram", defaults=params)
-        logger.add(handler, level="ERROR")
 
         config = configparser.ConfigParser()
         logger.info("Reading config")
