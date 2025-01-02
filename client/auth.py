@@ -1,16 +1,10 @@
 from time import sleep
 import win32gui, win32process
-from snoop import snoop
-
 from loger_data import params
 from  interface_for_var_acc import get_num_acc
-import queue
 import mysql.connector
-from pywinauto import Application
-from threading import Thread, Event
-from psutil import pid_exists
+from threading import Thread
 from data_all import host_ip, login_db, pass_db, name_db
-import webbrowser
 import argparse
 import ctypes
 import pynput
@@ -111,9 +105,9 @@ def main():
 
             try:
 
-                # acc = get_acc(appid)
-                # id_, login_steam, pass_steam, auth_mail, ap = acc
-                id_, login_steam, pass_steam, auth_mail, ap = (0, "fabiooo12345", "qsxcgyujm1590.", 1, 730)
+                acc = get_acc(appid)
+                id_, login_steam, pass_steam, auth_mail, ap = acc
+                # id_, login_steam, pass_steam, auth_mail, ap = (0, "fabiooo12345", "qsxcgyujm1590.", 1, 730)
                 logger.info(f"Получил аккаунт {login_steam}")
 
             except Exception as e:

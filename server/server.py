@@ -21,7 +21,12 @@ from SDA import SDA
 class ServerSocket:
 
     def __init__(self):
-        self.host = socket.gethostname()
+        # self.host = socket.gethostname()
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        self.host = ip
         self.port = 5000
         self.wait_guard = queue.Queue()
         self.wait_ping = queue.Queue()
@@ -97,7 +102,7 @@ class ServerSocket:
             id_ = self.wait_ping.get()
             with self.lock:
                 self.backup[id_] = 1
-            print(self.backup)
+            # print(self.backup)
 
     # @snoop
     def guard(self,):
@@ -114,6 +119,7 @@ class ServerSocket:
 
             try:
                 conn.sendall(pickle.dumps(guard))
+                logger.info('Отправил гвард')
             except Exception as e:
                 ctypes.windll.user32.MessageBoxW(0, f"Не смог отправить guard на {hostname}",
                                                  "Steam Guard",1)
@@ -156,6 +162,7 @@ class ServerSocket:
             connection.commit()
             cursor.close()
             connection.close()
+            logger.info('Отправил аккаунт в офлайн')
             return True
         except:
             logger.error("Не смог обновить данные аккаунта")
