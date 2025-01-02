@@ -79,14 +79,14 @@ def get_acc(appid):
     return account
 
 # @snoop
-def wait_close_steam(username):
+def wait_close_steam(id_, username):
     key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam\ActiveProcess")
     pid, regtype = winreg.QueryValueEx(key, "pid")
     pid_old = pid
     logger.info(f'Начал пинговать аккаунт {username}')
     while True:
         sleep(10)
-        socket_code.ping_acc(username)
+        socket_code.ping_acc(id_, username)
         pid, regtype = winreg.QueryValueEx(key, "pid")
         if pid != pid_old:
             break
@@ -134,11 +134,11 @@ def main():
                     mouse_listener.start()
                     try:
                         steam = Steam(login_steam,pass_steam, appid)
-                        Thread(target=wait_close_steam, args=[login_steam], daemon=False).start()
+                        Thread(target=wait_close_steam, args=[id_, login_steam], daemon=False).start()
                         logger.info(f'Запустил стим. Необходимость гварда {steam.guard}')
                         if steam.guard:
                             try:
-                                guard = socket_code.get_guard(login_steam)
+                                guard = socket_code.get_guard(id_, login_steam)
                                 logger.info('Получил гвард')
                                 steam.guard_input(guard)
                                 logger.info('Ввел гвард')

@@ -75,8 +75,8 @@ class ClientSocket:
             return True
 
     # @snoop
-    def ping_acc(self, username: str): #todo сделать отправку в БД самостоятельно
-        data = pickle.dumps(("ping", username, self.hostname,))
+    def ping_acc(self, id_, username: str): #todo сделать отправку в БД самостоятельно
+        data = pickle.dumps(("ping", id_, username, self.hostname,))
         try:
             self.socket.sendall(data)
             # logger.info(f'Пинганул о аккаунте  {username}')
@@ -84,8 +84,8 @@ class ClientSocket:
             logger.warning("Не смог отправить пинг хосту")
 
 
-    def get_guard(self, username: str) -> str:
-        data = pickle.dumps(("guard", username, self.hostname,))
+    def get_guard(self, id_, username: str) -> str:
+        data = pickle.dumps(("guard", id_, username, self.hostname,))
         try:
             self.socket.sendall(data)
             logger.info('Отправил запрос о гварде хосту')

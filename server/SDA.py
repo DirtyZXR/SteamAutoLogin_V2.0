@@ -1,8 +1,8 @@
+import time
+
 from pywinauto import Application, clipboard
 import psutil
 from loguru import logger
-from notifiers.logging import NotificationHandler
-from client.loger_data import params
 import configparser
 
 
@@ -13,6 +13,7 @@ class SDA:
         self.__get_logger_info()
         self.__get_all_items()
 
+    logger.info('Смотрю процеесы')
     def __get_top_window(self):
         process_name = "Steam Desktop Authenticator.exe"
 
@@ -20,6 +21,7 @@ class SDA:
             if process.name() == process_name:
                 process.terminate()
                 break
+        logger.info('Просмотрел процессы')
 
         self.app = Application(backend="uia").start(self.path_to_sda)
         window = self.app.top_window()
@@ -30,12 +32,14 @@ class SDA:
         if self.path_to_sda is None:
             raise Exception("Не указан путь к Steam Desktop Authenticator")
         self.__get_top_window()
+        logger.info('Начал инициализацию')
         self.window = self.app.top_window()
         self.filter_label = self.window.child_window(auto_id="txtAccSearch", control_type="Edit")
         self.acc_list = self.window.child_window(auto_id="listAccounts", control_type="List")
         self.copy_button = (self.window.child_window(title="Login Token", auto_id="groupBox1", control_type="Group")
                             .child_window(title="Copy", auto_id="btnCopy", control_type="Button"))
         self.window.minimize()
+        logger.info('Закончил инициализацию')
 
 
     def __get_logger_info(self):

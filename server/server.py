@@ -81,22 +81,22 @@ class ServerSocket:
         Thread(target=self.__get_ping_acc, daemon=False).start()
         while True:
             sleep(30)
-            for username in list(self.backup):
-                if self.backup[username] == 0:
+            for id_ in list(self.backup):
+                if self.backup[id_] == 0:
                     with self.lock:
-                        self.backup.pop(username)
-                    self.set_acc_ofline(username)
+                        self.backup.pop(id_)
+                    self.set_acc_ofline(id_)
                 else:
-                    self.backup[username] = 0
+                    self.backup[id_] = 0
             with open('backup.json', 'w') as file:
                 json.dump(self.backup, file)
 
 
     def __get_ping_acc(self):
         while True:
-            username = self.wait_ping.get()
+            id_ = self.wait_ping.get()
             with self.lock:
-                self.backup[username] = 1
+                self.backup[id_] = 1
             print(self.backup)
 
     # @snoop
@@ -104,12 +104,13 @@ class ServerSocket:
         while True:
             data, conn = self.wait_guard.get()
 
-            username = data[1]
-            hostname = data[2]
+            id_ = data[1]
+            username = data[2]
+            hostname = data[3]
 
             guard = self.sda.get_guard(username)
 
-            self.wait_ping.put(username)
+            self.wait_ping.put(id_)
 
             try:
                 conn.sendall(pickle.dumps(guard))
@@ -135,8 +136,8 @@ class ServerSocket:
             return False
 
 
-    def set_acc_ofline(self, username):
-        query = f"UPDATE users SET online = FALSE WHERE login_steam = {username}"
+    def set_acc_ofline(self, id_):
+        query = f"UPDATE users SET online = FALSE WHERE id = {id_}"
         try:
 
             connection = mysql.connector.connect(
