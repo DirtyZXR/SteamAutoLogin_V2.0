@@ -38,6 +38,7 @@ class ServerSocket:
         self.socket.listen(25)
         try:
             self.sda = SDA()
+            print("SDA started")
         except:
             # logger.error("Failed to initialize SDA")
             self.sda = None
@@ -54,6 +55,7 @@ class ServerSocket:
     def start_accept(self,):
         while True:
             conn, address = self.socket.accept()
+            print("Start accept connection on address " + address)
             Thread(target=self.distribution, args=[conn, address], daemon=False).start()
 
     # @snoop
@@ -65,6 +67,7 @@ class ServerSocket:
             except:
                 break
 
+            print(f"Connection {data[3]}, account - {data[2]}, task - {data[0]}")
             if data[0] == 'guard':
                 self.wait_guard.put((data, conn))
             elif data[0] == 'ping':
@@ -87,10 +90,12 @@ class ServerSocket:
         while True:
             sleep(30)
             for id_ in list(self.backup):
+                print(id_, "status ", self.backup[id_])
                 if self.backup[id_] == 0:
-                    with self.lock:
-                        self.backup.pop(id_)
-                    self.set_acc_ofline(id_)
+                    can_offline = self.set_acc_ofline(id_)
+                    if can_offline:
+                        with self.lock:
+                            self.backup.pop(id_)
                 else:
                     self.backup[id_] = 0
             with open('backup.json', 'w') as file:
@@ -102,7 +107,7 @@ class ServerSocket:
             id_ = self.wait_ping.get()
             with self.lock:
                 self.backup[id_] = 1
-            # print(self.backup)
+            # print(f'')
 
     # @snoop
     def guard(self,):
@@ -112,8 +117,10 @@ class ServerSocket:
             id_ = data[1]
             username = data[2]
             hostname = data[3]
+            print(f'Get request from {hostname}, account {username}, id = {id_}')
 
             guard = self.sda.get_guard(username)
+            print(f'guard for {username} - {guard}')
 
             self.wait_ping.put(id_)
 
@@ -137,6 +144,7 @@ class ServerSocket:
                 database=db_name
             )
             return connection
+
         except Exception as e:
             logger.error("Error connecting to BD")
             return False
@@ -153,7 +161,8 @@ class ServerSocket:
                 database=name_db
             )
         except Exception as e:
-            logger.error('Сервер не смог подключиться к БД')
+            logger.error(f'Сервер не смог подключиться к БД, чтобы отправить аккаунт {id_} в оффлайн')
+            print(f'Error connecting to BD for offline {id_}')
             return False
 
         try:
@@ -162,10 +171,12 @@ class ServerSocket:
             connection.commit()
             cursor.close()
             connection.close()
-            logger.info('Отправил аккаунт в офлайн')
+            print(f"Account offline: {id_}")
+            logger.info(f'Отправил аккаунт {id_} в офлайн')
             return True
         except:
-            logger.error("Не смог обновить данные аккаунта")
+            print(f"Error updating account {id_}")
+            logger.error(f"Не смог обновить данные аккаунта {id_}")
             return False
 
 if __name__ == '__main__':
