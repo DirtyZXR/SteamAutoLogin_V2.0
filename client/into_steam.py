@@ -16,7 +16,7 @@ class Steam:
     def run_steam(self, login:str, password:str, id_game:int):
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam")
         path_steam, regtype = winreg.QueryValueEx(key, "SteamExe")
-        path_steam += f' -login {login} -password {password} -applaunch {id_game}'
+        path_steam += f'-language "russian" -login {login} -password {password} -applaunch {id_game}'
         app = Application(backend="uia").start(path_steam)
 
         while True and app.is_process_running():

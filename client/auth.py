@@ -55,7 +55,7 @@ def get_acc(appid):
                     account = (0, 0, 0, 0, -1)
                 else:
                     account = accounts_appid[num]
-                    query = f"UPDATE users SET online = 1 WHERE id = {account[0]}"
+                    query = f"UPDATE users SET online = 1 WHERE id = {account[0]}"#todo это сделать на сервере
                     cursor.execute(query)
                     connection.commit()
             else:
@@ -85,6 +85,12 @@ def wait_close_steam(id_, username):
         if pid != pid_old:
             break
     logger.info(f'Закончил пинговать аккаунт {username}')
+
+def stop_timer(mouse: pynput.mouse.Listener, key: pynput.mouse.Listener):
+    sleep(60)
+    mouse.stop()
+    key.stop()
+    print("Stop timers")
 
 def main():
 
@@ -126,6 +132,7 @@ def main():
                     mouse_listener = pynput.mouse.Listener(suppress=True)
                     keyboard_listener.start()
                     mouse_listener.start()
+                    Thread(target=stop_timer, args=(mouse_listener, keyboard_listener))
                     try:
                         steam = Steam(login_steam,pass_steam, appid)
                         Thread(target=wait_close_steam, args=[id_, login_steam], daemon=False).start()
