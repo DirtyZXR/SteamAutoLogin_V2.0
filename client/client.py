@@ -75,11 +75,11 @@ class ClientSocket:
             return True
 
     # @snoop
-    def ping_acc(self, id_, username: str): #todo сделать отправку в БД самостоятельно
+    def ping_acc(self, id_, username: str):
         data = pickle.dumps(("ping", id_, username, self.hostname,))
         try:
             self.socket.sendall(data)
-            # logger.info(f'Пинганул о аккаунте  {username}')
+            logger.info(f'Пинганул о аккаунте  {username}')
         except:
             logger.warning("Не смог отправить пинг хосту")
 
