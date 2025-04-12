@@ -206,3 +206,5 @@ if __name__ == '__main__':
     handler = NotificationHandler("telegram", defaults=params)
     logger.add(handler, level="ERROR")
     ServerSocket()
+
+#todo сделать проверку свободных хостов в гизмо и все акки в оффлайн
