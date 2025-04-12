@@ -1,5 +1,7 @@
 from time import sleep
 import win32gui, win32process
+from snoop import snoop
+
 from loger_data import params
 from  interface_for_var_acc import get_num_acc
 import mysql.connector
@@ -12,7 +14,7 @@ import winreg
 import psutil
 from client import ClientSocket
 from loguru import logger
-from notifiers.logging import NotificationHandler
+# from notifiers.logging import NotificationHandler
 from My_Exeptions import *
 from into_steam import Steam
 
@@ -55,9 +57,10 @@ def get_acc(appid):
                     account = (0, 0, 0, 0, -1)
                 else:
                     account = accounts_appid[num]
-                    query = f"UPDATE users SET online = 1 WHERE id = {account[0]}"#todo это сделать на сервере
-                    cursor.execute(query)
-                    connection.commit()
+                    # query = f"UPDATE users SET online = 1 WHERE id = {account[0]}"#todo это сделать на сервере
+                    # cursor.execute(query)
+                    # connection.commit()
+                    pass
             else:
                 account = (0, 0, 0, 0, 0)
 
@@ -87,13 +90,15 @@ def wait_close_steam(id_, username):
     logger.info(f'Закончил пинговать аккаунт {username}')
 
 def stop_timer(mouse: pynput.mouse.Listener, key: pynput.mouse.Listener):
-    sleep(60)
+    logger.info("Start timers")
+    sleep(30)
     mouse.stop()
     key.stop()
-    print("Stop timers")
+    logger.info("Stop timers")
 
+# @snoop
 def main():
-
+    global socket_code
     try:
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam\ActiveProcess")
         pid, regtype = winreg.QueryValueEx(key, "pid")
@@ -110,51 +115,70 @@ def main():
                 raise Exception('Не удалось получить аргументы')
 
             try:
-
-                acc = get_acc(appid)
-                id_, login_steam, pass_steam, auth_mail, ap = acc
-                # id_, login_steam, pass_steam, auth_mail, ap = (0, "fabiooo12345", "qsxcgyujm1590.", 1, 730)
-                logger.info(f"Получил аккаунт {login_steam}")
-
+                socket_code = ClientSocket()
+                suc = socket_code.host_ping()
             except Exception as e:
                 logger.error(e)
-                raise ConnectedError(e)
+                logger.error("Не смог подключиться к хосту")
+                suc = False
 
-            if ap != -1:
-                if ap == 0:
-                    ctypes.windll.user32.MessageBoxW(0, "Сейчас нет доступных аккаутов для это игры. Попробуйте позже.",
-                                                     "Нет доступных аккаунтов", 1)
-                else:
-                    global socket_code
-                    socket_code = ClientSocket()
+            if suc:
+                try:
+                    acc = get_acc(appid)
+                    id_, login_steam, pass_steam, auth_mail, ap = acc
+                    # id_, login_steam, pass_steam, auth_mail, ap = (0, "fabiooo12345", "qsxcgyujm1590.", 1, 730)
+                    logger.info(f"Получил аккаунт {login_steam}")
 
-                    keyboard_listener = pynput.keyboard.Listener(suppress=True)
-                    mouse_listener = pynput.mouse.Listener(suppress=True)
-                    keyboard_listener.start()
-                    mouse_listener.start()
-                    Thread(target=stop_timer, args=(mouse_listener, keyboard_listener))
-                    try:
-                        steam = Steam(login_steam,pass_steam, appid)
-                        Thread(target=wait_close_steam, args=[id_, login_steam], daemon=False).start()
-                        logger.info(f'Запустил стим. Необходимость гварда {steam.guard}')
-                        if steam.guard:
-                            try:
-                                guard = socket_code.get_guard(id_, login_steam)
-                                logger.info('Получил гвард')
-                                steam.guard_input(guard)
-                                logger.info('Ввел гвард')
+                except Exception as e:
+                    logger.error(e)
+                    raise ConnectedError(e)
+
+                if ap != -1:
+                    if ap == 0:
+                        ctypes.windll.user32.MessageBoxW(0, "Сейчас нет доступных аккаутов для это игры. Попробуйте позже.",
+                                                         "Нет доступных аккаунтов", 1)
+                    else:
+
+                        keyboard_listener = pynput.keyboard.Listener(suppress=True)
+                        mouse_listener = pynput.mouse.Listener(suppress=True)
+                        keyboard_listener.start()
+                        mouse_listener.start()
+                        logger.info("Запустил слушатели клавиатуры и мыши")
+                        Thread(target=stop_timer, args=(mouse_listener, keyboard_listener)).start()
+                        try:
+                            logger.info("Запускаю стим")
+                            steam = Steam(login_steam,pass_steam, appid)
+                            Thread(target=wait_close_steam, args=[id_, login_steam], daemon=False).start()
+                            if steam.guard:
+                                try:
+                                    guard = socket_code.get_guard(id_, login_steam)
+                                    logger.info('Получил гвард')
+                                except Exception as e:
+                                    logger.error(e)
+                                    print(e)
+                                    raise Exception('Не смог получить гвард от аккаунта')
+                                try:
+                                    suc = steam.guard_input(keyboard_listener, guard)
+                                    if suc:
+                                        logger.info('Ввел гвард')
+                                    else:
+                                        logger.warning("Не удалось ввести гвард")
+                                except Exception as e:
+                                    logger.error(e)
+                                    print(e)
+                                    raise Exception('Не смог ввести от аккаунта')
+
+                            else:
                                 logger.info('Вход произведен')
-                            except Exception as e:
-                                logger.error(e)
-                                raise Exception('Не смог получить гвард от аккаунта')
+                        except:
+                            pass
+                        finally:
+                            keyboard_listener.stop()
+                            mouse_listener.stop()
+                            logger.info("Остановил слушатели клавиатуры и мыши")
+            else:
+                ctypes.windll.user32.MessageBoxW(0, "Не удалось подключиться к серверу. Обратитесь к администратору", "Ошибка", 1)
 
-                        else:
-                            logger.info('Вход произведен')
-                    except:
-                        pass
-                    finally:
-                        keyboard_listener.stop()
-                        mouse_listener.stop()
         else:
             ctypes.windll.user32.MessageBoxW(0, "Стим запущен. Сначала закройте стим.", "Ошибка", 1)
 
@@ -166,7 +190,7 @@ def main():
 
 
 logger.add("./file_client.log", format="{time:DD.MM.YYYY at HH:mm:ss} | {name}:{function}:{line} | {level} | {message}", level="INFO", rotation="100MB")
-handler = NotificationHandler("telegram", defaults=params)
-logger.add(handler, level="ERROR")
+# handler = NotificationHandler("telegram", defaults=params)
+# logger.add(handler, level="ERROR")
 
 main()

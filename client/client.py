@@ -5,8 +5,8 @@ import configparser
 import pickle
 # import snoop
 from loguru import logger
-from notifiers.logging import NotificationHandler
-from snoop import snoop
+# from notifiers.logging import NotificationHandler
+# from snoop import snoop
 
 from loger_data import params
 
@@ -60,6 +60,7 @@ class ClientSocket:
     def host_ping(self) -> bool:
         if self.can_connected is None:
             server_connection = self.socket.connect_ex((self.server_ip, self.server_port))
+
         else:
             self.socket.close()
             self.socket = socket.socket()
@@ -75,22 +76,27 @@ class ClientSocket:
             return True
 
     # @snoop
-    def ping_acc(self, id_, username: str):
+    def ping_acc(self, id_, username: str, first: bool = True) -> None:
         data = pickle.dumps(("ping", id_, username, self.hostname,))
         try:
             self.socket.sendall(data)
             logger.info(f'Пинганул о аккаунте  {username}')
         except:
-            logger.warning("Не смог отправить пинг хосту")
-
+            if first:
+                logger.warning("Не смог отправить пинг хосту")
+                self.host_ping()
+                logger.info("Перезагрузил соединение")
+                self.ping_acc(id_, username, False)
+            else:
+                logger.warning("Перезагрузка соединения не помогла")
 
     def get_guard(self, id_, username: str) -> str:
         data = pickle.dumps(("guard", id_, username, self.hostname,))
         try:
             self.socket.sendall(data)
-            logger.info('Отправил запрос о гварде хосту')
+            logger.info(f'Отправил запрос о гварде аккаунта {username} хосту')
         except:
-            logger.warning("Не смог отправить запрос о гварде хосту")
+            logger.warning(f"Не смог отправить запрос о гварде аккаунта {username} хосту")
             return "ERROR"
 
         try:
@@ -101,6 +107,7 @@ class ClientSocket:
             return "ERROR"
 
         guard = pickle.loads(chunk)
+        logger.info(f"Гвард аккаунта {username} - {guard}")
 
         return guard
 
