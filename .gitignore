@@ -1,9 +1,8 @@
 /.idea/
-/.idea/misc.xml
 /venv/
-/file_sda.log
-/file_server.log
+*.log
 /SteamAutoLogin_V2.0.iml
-/server/file_server.log
-/server/file_sda.log
 /server/backup.json
+.env
+__pycache__/
+*.pyc
