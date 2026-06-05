@@ -1,11 +1,11 @@
 import json
 import threading
 from pathlib import Path
+
 from loguru import logger
 
 from shared.config import DatabaseConfig
 from shared.db import set_account_online
-
 
 BACKUP_FILE = "backup.json"
 PING_TIMEOUT = 30
@@ -22,7 +22,7 @@ class AccountManager:
         path = Path(BACKUP_FILE)
         if path.exists():
             try:
-                with open(path, "r") as f:
+                with open(path) as f:
                     self.backup = json.load(f)
                 logger.info(f"Загружен backup: {self.backup}")
             except json.JSONDecodeError:

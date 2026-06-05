@@ -1,11 +1,10 @@
 import time
+import winreg
 
-import pyperclip
 import pynput
+import pyperclip
 from loguru import logger
 from pywinauto import Application, keyboard
-from pywinauto.clipboard import clipboard
-import winreg
 
 
 class SteamAutomation:
@@ -19,7 +18,10 @@ class SteamAutomation:
     def _launch_and_connect(self):
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam")
         path_steam, _ = winreg.QueryValueEx(key, "SteamExe")
-        cmd = f'{path_steam} -language "russian" -login {self.login} -password {self.password} -applaunch {self.appid}'
+        cmd = (
+            f'{path_steam} -language "russian"'
+            f" -login {self.login} -password {self.password} -applaunch {self.appid}"
+        )
         logger.info("Запуск Steam")
         self.app = Application(backend="uia").start(cmd)
 

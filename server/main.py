@@ -2,14 +2,15 @@ import ctypes
 import socket
 import threading
 from time import sleep
+
 from loguru import logger
 
+from server.account_manager import PING_TIMEOUT, AccountManager
+from server.handlers import MessageHandler
+from server.network import TCPServer
+from server.sda_automation import SDAAutomation
 from shared.config import Settings
 from shared.logger import setup_logger
-from server.account_manager import AccountManager, PING_TIMEOUT
-from server.sda_automation import SDAAutomation
-from server.network import TCPServer
-from server.handlers import MessageHandler
 
 
 def main():

@@ -1,5 +1,5 @@
-from customtkinter import CTk, CTkButton
 from CTkListbox import CTkListbox
+from customtkinter import CTk
 
 
 def select_account(accounts: list[tuple]) -> int:
@@ -7,7 +7,7 @@ def select_account(accounts: list[tuple]) -> int:
 
     def on_select(option):
         nonlocal result
-        for i, acc in enumerate(accounts):
+        for i, _acc in enumerate(accounts):
             if i == option:
                 result = option
                 break

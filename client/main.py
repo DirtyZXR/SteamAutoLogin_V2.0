@@ -1,22 +1,20 @@
 import argparse
 import ctypes
-import sys
 import threading
+import winreg
 from time import sleep
-from pathlib import Path
 
 import psutil
-import winreg
 from loguru import logger
 
-from shared.config import Settings
-from shared.db import get_free_accounts
-from shared.exceptions import ConnectedError
-from shared.logger import setup_logger
 from client.gui import select_account
 from client.input_guard import InputGuard
 from client.network import NetworkClient
 from client.steam_automation import SteamAutomation
+from shared.config import Settings
+from shared.db import get_free_accounts
+from shared.exceptions import ConnectedError
+from shared.logger import setup_logger
 
 
 def wait_for_steam_close(account_id: int, username: str, client: NetworkClient):
@@ -67,7 +65,7 @@ def main():
         accounts = get_free_accounts(config.db, appid)
     except Exception as e:
         logger.error(f"Ошибка получения аккаунтов: {e}")
-        raise ConnectedError(e)
+        raise ConnectedError(e) from e
 
     if not accounts:
         ctypes.windll.user32.MessageBoxW(

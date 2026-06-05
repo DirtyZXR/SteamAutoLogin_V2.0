@@ -8,6 +8,7 @@ from typing import Any
 class MessageAction(Enum):
     GUARD = "guard"
     PING = "ping"
+    GUARD_RESPONSE = "guard_response"
 
 
 @dataclass
@@ -35,17 +36,28 @@ class Message:
         )
 
 
-def serialize_message(msg: Message) -> bytes:
+@dataclass
+class GuardResponse:
+    guard_code: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"action": MessageAction.GUARD_RESPONSE.value, "guard_code": self.guard_code}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "GuardResponse":
+        return cls(guard_code=str(data["guard_code"]))
+
+
+AnyMessage = Message | GuardResponse
+
+
+def serialize_message(msg: AnyMessage) -> bytes:
     payload = json.dumps(msg.to_dict(), ensure_ascii=False).encode("utf-8")
     length = struct.pack("!I", len(payload))
     return length + payload
 
 
-def deserialize_message(data: bytes) -> Message:
-    return Message.from_dict(json.loads(data.decode("utf-8")))
-
-
-def recv_message(sock, bufsize: int = 4096) -> Message | None:
+def recv_message(sock) -> AnyMessage | None:
     raw_length = _recv_exact(sock, 4)
     if raw_length is None:
         return None
@@ -53,7 +65,11 @@ def recv_message(sock, bufsize: int = 4096) -> Message | None:
     raw_data = _recv_exact(sock, length)
     if raw_data is None:
         return None
-    return deserialize_message(raw_data)
+    data = json.loads(raw_data.decode("utf-8"))
+    action = data.get("action", "")
+    if action == MessageAction.GUARD_RESPONSE.value:
+        return GuardResponse.from_dict(data)
+    return Message.from_dict(data)
 
 
 def _recv_exact(sock, n: int) -> bytes | None:

@@ -1,10 +1,11 @@
 import threading
+
 from loguru import logger
 
-from shared.protocol import MessageAction
 from server.account_manager import AccountManager
-from server.sda_automation import SDAAutomation
 from server.network import TCPServer
+from server.sda_automation import SDAAutomation
+from shared.protocol import MessageAction
 
 
 class MessageHandler:
@@ -42,7 +43,7 @@ class MessageHandler:
                     guard = self.sda.get_guard(msg.username)
                     logger.info(f"Guard для {msg.username}: {guard}")
                     self.account_manager.mark_online(msg.account_id)
-                    self.tcp_server.send_response(conn, guard)
+                    self.tcp_server.send_guard_response(conn, guard)
                     logger.info(f"Guard отправлен на {msg.hostname}")
                 except Exception as e:
                     logger.error(f"Ошибка при получении guard: {e}")

@@ -1,4 +1,5 @@
 import configparser
+import contextlib
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -69,11 +70,9 @@ class Settings:
         if Path(resolved).exists():
             config = configparser.ConfigParser()
             config.read(resolved)
-            try:
+            with contextlib.suppress(configparser.NoSectionError, configparser.NoOptionError):
                 settings.server.ip = config.get("Settings", "server_ip")
                 settings.server.port = int(config.get("Settings", "port"))
-            except (configparser.NoSectionError, configparser.NoOptionError):
-                pass
         return settings
 
     @classmethod
@@ -83,10 +82,8 @@ class Settings:
         if Path(resolved).exists():
             config = configparser.ConfigParser()
             config.read(resolved)
-            try:
+            with contextlib.suppress(configparser.NoSectionError, configparser.NoOptionError):
                 settings.sda.path = config.get("SDA", "path_to_SDA")
-            except (configparser.NoSectionError, configparser.NoOptionError):
-                pass
         return settings
 
 

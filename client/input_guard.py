@@ -1,8 +1,7 @@
-import ctypes
-import pynput
-from loguru import logger
 from time import sleep
 
+import pynput
+from loguru import logger
 
 INPUT_BLOCK_TIMEOUT = 30
 

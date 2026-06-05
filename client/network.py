@@ -1,8 +1,9 @@
 import socket
+
 from loguru import logger
 
-from shared.config import Settings, ServerConfig
-from shared.protocol import Message, MessageAction, serialize_message, recv_message
+from shared.config import ServerConfig
+from shared.protocol import GuardResponse, Message, MessageAction, recv_message, serialize_message
 
 
 class NetworkClient:
@@ -74,9 +75,11 @@ class NetworkClient:
             if response is None:
                 logger.warning("Пустой ответ guard от сервера")
                 return "ERROR"
-            guard = response.username
-            logger.info(f"Получен guard для {username}")
-            return guard
+            if isinstance(response, GuardResponse):
+                logger.info(f"Получен guard для {username}")
+                return response.guard_code
+            logger.warning("Неожиданный тип ответа от сервера")
+            return "ERROR"
         except Exception:
             logger.warning("Не удалось получить guard от сервера")
             return "ERROR"
