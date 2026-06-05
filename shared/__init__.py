@@ -14,6 +14,9 @@ from shared.protocol import (
     deserialize_message as deserialize_message,
 )
 from shared.protocol import (
+    recv_message as recv_message,
+)
+from shared.protocol import (
     serialize_message as serialize_message,
 )
 
@@ -26,4 +29,5 @@ __all__ = [
     "MessageAction",
     "serialize_message",
     "deserialize_message",
+    "recv_message",
 ]

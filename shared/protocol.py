@@ -51,10 +51,22 @@ class GuardResponse:
 AnyMessage = Message | GuardResponse
 
 
+def _parse_dict(data: dict[str, Any]) -> AnyMessage:
+    action = data.get("action", "")
+    if action == MessageAction.GUARD_RESPONSE.value:
+        return GuardResponse.from_dict(data)
+    return Message.from_dict(data)
+
+
 def serialize_message(msg: AnyMessage) -> bytes:
     payload = json.dumps(msg.to_dict(), ensure_ascii=False).encode("utf-8")
     length = struct.pack("!I", len(payload))
     return length + payload
+
+
+def deserialize_message(data: bytes) -> AnyMessage:
+    parsed = json.loads(data.decode("utf-8"))
+    return _parse_dict(parsed)
 
 
 def recv_message(sock) -> AnyMessage | None:
@@ -65,11 +77,7 @@ def recv_message(sock) -> AnyMessage | None:
     raw_data = _recv_exact(sock, length)
     if raw_data is None:
         return None
-    data = json.loads(raw_data.decode("utf-8"))
-    action = data.get("action", "")
-    if action == MessageAction.GUARD_RESPONSE.value:
-        return GuardResponse.from_dict(data)
-    return Message.from_dict(data)
+    return deserialize_message(raw_data)
 
 
 def _recv_exact(sock, n: int) -> bytes | None:
