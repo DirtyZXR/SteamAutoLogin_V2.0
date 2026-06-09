@@ -17,6 +17,7 @@ class Message:
     account_id: int
     username: str
     hostname: str
+    token: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -24,6 +25,7 @@ class Message:
             "account_id": self.account_id,
             "username": self.username,
             "hostname": self.hostname,
+            "token": self.token,
         }
 
     @classmethod
@@ -33,6 +35,7 @@ class Message:
             account_id=int(data["account_id"]),
             username=str(data["username"]),
             hostname=str(data["hostname"]),
+            token=str(data.get("token", "")),
         )
 
 

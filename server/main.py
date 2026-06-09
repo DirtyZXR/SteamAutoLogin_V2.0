@@ -1,5 +1,4 @@
 import ctypes
-import socket
 import threading
 from time import sleep
 
@@ -11,16 +10,20 @@ from server.network import TCPServer
 from server.sda_automation import SDAAutomation
 from shared.config import Settings
 from shared.logger import setup_logger
+from shared.netutil import get_local_ip
 
 
 def main():
     config = Settings.load_server_config()
     setup_logger("file_server.log", config.telegram.params)
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    host_ip = s.getsockname()[0]
-    s.close()
+    if not config.auth_token:
+        logger.warning(
+            "AUTH_TOKEN не задан — сервер принимает guard-запросы без аутентификации. "
+            "Задайте AUTH_TOKEN в .env на сервере и клиентах."
+        )
+
+    host_ip = get_local_ip()
 
     try:
         sda = SDAAutomation(config.sda.path)
@@ -36,12 +39,11 @@ def main():
 
     account_manager = AccountManager(config.db)
     tcp_server = TCPServer(host_ip, config.server.port)
-    handler = MessageHandler(tcp_server, account_manager, sda)
+    handler = MessageHandler(tcp_server, account_manager, sda, auth_token=config.auth_token)
 
     tcp_server.set_handler(handler.handle)
 
-    threading.Thread(target=account_manager._load_backup, daemon=False).start()
-    threading.Thread(target=_offline_check_loop, args=[account_manager], daemon=False).start()
+    threading.Thread(target=_offline_check_loop, args=[account_manager], daemon=True).start()
 
     tcp_server.start()
 

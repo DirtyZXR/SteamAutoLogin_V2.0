@@ -1,8 +1,17 @@
 /.idea/
 /venv/
+/.venv/
 *.log
 /SteamAutoLogin_V2.0.iml
+*.iml
 /server/backup.json
+backup.json
 .env
 __pycache__/
 *.pyc
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+/build/
+/dist/
+*.spec

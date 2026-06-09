@@ -62,6 +62,7 @@ class Settings:
     server: ServerConfig = field(default_factory=ServerConfig)
     sda: SDAConfig = field(default_factory=SDAConfig)
     captcha_key: str = field(default_factory=lambda: os.getenv("CAPTCHA_KEY", ""))
+    auth_token: str = field(default_factory=lambda: os.getenv("AUTH_TOKEN", ""))
 
     @classmethod
     def load_client_config(cls, config_path: str | None = None) -> "Settings":

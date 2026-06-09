@@ -47,13 +47,23 @@ class AccountManager:
             self._save_backup()
 
     def check_offline_cycle(self):
-        for account_id in list(self.backup):
-            logger.info(f"{account_id}, статус: {self.backup[account_id]}")
-            if self.backup[account_id] == 0:
-                if set_account_online(self.db_config, int(account_id), online=False):
-                    logger.info(f"Аккаунт {account_id} -> offline")
-                    with self.lock:
-                        self.backup.pop(account_id, None)
-            else:
-                self.backup[account_id] = 0
-        self._save_backup()
+        with self.lock:
+            snapshot = dict(self.backup)
+
+        # Сетевые вызовы к БД делаем вне лока, чтобы не блокировать ping-поток.
+        to_remove: list[str] = []
+        for account_id, status in snapshot.items():
+            logger.info(f"{account_id}, статус: {status}")
+            if status == 0 and set_account_online(self.db_config, int(account_id), online=False):
+                logger.info(f"Аккаунт {account_id} -> offline")
+                to_remove.append(account_id)
+
+        with self.lock:
+            for account_id in to_remove:
+                self.backup.pop(account_id, None)
+            # Декремент heartbeat: активные (1) переводим в pending (0).
+            # Если за время цикла пришёл ping (значение снова 1) — он сохранится.
+            for account_id in list(self.backup):
+                if account_id not in to_remove and self.backup[account_id] != 0:
+                    self.backup[account_id] = 0
+            self._save_backup()

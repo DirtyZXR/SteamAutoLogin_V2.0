@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dev/runtime deps
+        # Полный requirements.txt содержит Windows-only пакеты (pywin32, pywinauto),
+        # поэтому в CI ставим только то, что нужно линтеру и тестам.
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy pytest loguru python-dotenv mysql-connector-python
+
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Mypy (type check)
+        run: mypy shared server || true
+
+      - name: Pytest
+        run: pytest -q

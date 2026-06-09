@@ -28,7 +28,25 @@ class TestMessage:
             "account_id": 42,
             "username": "testuser",
             "hostname": "PC-01",
+            "token": "",
         }
+
+    def test_token_roundtrip(self):
+        msg = Message(
+            action=MessageAction.GUARD,
+            account_id=1,
+            username="u",
+            hostname="h",
+            token="secret-123",
+        )
+        restored = Message.from_dict(msg.to_dict())
+        assert restored.token == "secret-123"
+
+    def test_from_dict_without_token_defaults_empty(self):
+        msg = Message.from_dict(
+            {"action": "ping", "account_id": 1, "username": "u", "hostname": "h"}
+        )
+        assert msg.token == ""
 
     def test_from_dict(self):
         data = {

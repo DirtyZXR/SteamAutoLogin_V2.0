@@ -30,12 +30,12 @@ def wait_for_steam_close(account_id: int, username: str, client: NetworkClient):
     logger.info(f"Закончил пинговать аккаунт {username}")
 
 
-def pick_account(accounts: list[tuple]) -> tuple:
+def pick_account(accounts: list[tuple]) -> tuple | None:
     if len(accounts) == 1:
         return accounts[0]
     idx = select_account(accounts)
     if idx == -1:
-        return (0, 0, 0, 0, -1)
+        return None
     return accounts[idx]
 
 
@@ -59,7 +59,7 @@ def main():
     args = parser.parse_args()
     appid = args.appid
 
-    client = NetworkClient(config.server)
+    client = NetworkClient(config.server, token=config.auth_token)
 
     try:
         accounts = get_free_accounts(config.db, appid)
@@ -75,16 +75,9 @@ def main():
         return
 
     account = pick_account(accounts)
-    account_id, login_steam, pass_steam, auth_mail, ap = account
-
-    if ap == -1:
+    if account is None:
         return
-    if ap == 0:
-        ctypes.windll.user32.MessageBoxW(
-            0, "Нет доступных аккаунтов для этой игры. Попробуйте позже.",
-            "Нет доступных аккаунтов", 1,
-        )
-        return
+    account_id, login_steam, pass_steam, _auth_mail, _game = account
 
     input_guard = InputGuard()
     input_guard.block()

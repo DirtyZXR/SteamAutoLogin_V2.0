@@ -1,7 +1,18 @@
+import re
+
 import mysql.connector
 from loguru import logger
 
 from shared.config import DatabaseConfig
+
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _safe_table(name: str) -> str:
+    """Имена таблиц нельзя параметризовать через %s, поэтому валидируем как идентификатор."""
+    if not _IDENTIFIER_RE.match(name):
+        raise ValueError(f"Недопустимое имя таблицы: {name!r}")
+    return name
 
 
 def create_connection(db_config: DatabaseConfig):
@@ -19,7 +30,8 @@ def create_connection(db_config: DatabaseConfig):
 
 
 def set_account_online(db_config: DatabaseConfig, account_id: int, online: bool) -> bool:
-    query = "UPDATE users SET online = %s WHERE id = %s"
+    table = _safe_table(db_config.table)
+    query = f"UPDATE {table} SET online = %s WHERE id = %s"
     status_str = "online" if online else "offline"
     try:
         connection = create_connection(db_config)
@@ -38,9 +50,10 @@ def set_account_online(db_config: DatabaseConfig, account_id: int, online: bool)
 
 
 def get_free_accounts(db_config: DatabaseConfig, appid: str) -> list[tuple]:
-    query = """
+    table = _safe_table(db_config.table)
+    query = f"""
         SELECT id, login_steam, pass_steam, auth_mail, game
-        FROM users
+        FROM {table}
         WHERE online = FALSE AND active = TRUE
     """
     try:

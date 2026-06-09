@@ -7,30 +7,29 @@ from shared.protocol import GuardResponse, Message, MessageAction, recv_message,
 
 
 class NetworkClient:
-    def __init__(self, config: ServerConfig):
+    def __init__(self, config: ServerConfig, token: str = ""):
         self.hostname = socket.gethostname()
         self.port = config.port
         self.server_ip = config.ip
+        self.token = token
         self.socket = socket.socket()
         self.can_connected: bool | None = None
         self._connect()
-
-    def _get_local_ip(self) -> str:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        logger.info("Определён локальный IP: {ip}", ip=ip)
-        return ip
 
     def _connect(self) -> bool:
         if self.can_connected is not None:
             self.socket.close()
             self.socket = socket.socket()
 
-        result = self.socket.connect_ex((self.server_ip, self.port))
-        if result == 10061:
-            logger.warning("Сервер недоступен")
+        try:
+            result = self.socket.connect_ex((self.server_ip, self.port))
+        except OSError as e:
+            logger.warning(f"Ошибка подключения к серверу: {e}")
+            self.can_connected = None
+            return False
+
+        if result != 0:
+            logger.warning(f"Сервер недоступен (код {result})")
             self.can_connected = None
             return False
 
@@ -44,6 +43,7 @@ class NetworkClient:
             account_id=account_id,
             username=username,
             hostname=self.hostname,
+            token=self.token,
         )
         try:
             self.socket.sendall(serialize_message(msg))
@@ -62,6 +62,7 @@ class NetworkClient:
             account_id=account_id,
             username=username,
             hostname=self.hostname,
+            token=self.token,
         )
         try:
             self.socket.sendall(serialize_message(msg))
